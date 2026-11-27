@@ -1,0 +1,2 @@
+-- Superseded by 20261127000001_phase6_sales_recipes_and_usage.
+-- This no-op preserves compatibility with environments that recorded the original timestamp.

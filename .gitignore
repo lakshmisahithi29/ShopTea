@@ -1,0 +1,34 @@
+# Node.js
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+.vercel/
+coverage/
+.nyc_output/
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/data/*.json
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.neon
+.qoder/
+.cache/
+.tmp/
+
+# Local QA artifacts
+/phase*.png
+/p3-*.png

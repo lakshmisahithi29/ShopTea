@@ -1,0 +1,380 @@
+// ShopTea Database Schema
+// Optimized for Multi-Tenant Inventory Control for Small Tea Shops
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+enum ShopType {
+  TEA_SHOP
+  CAFE
+  RESTAURANT
+  OTHER
+}
+
+enum ItemCategory {
+  TEA_LEAVES
+  DAIRY
+  SPICES
+  SWEETENERS
+  PACKAGING
+  SNACKS
+  OTHER
+}
+
+enum ItemUnit {
+  KG
+  G
+  LITRES
+  ML
+  PACKETS
+  PIECES
+}
+
+enum TransactionType {
+  PURCHASE
+  USAGE
+  WASTAGE
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum TransactionStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum StockAlertType {
+  OUT_OF_STOCK
+  LOW_STOCK
+  NEEDS_REORDER
+}
+
+enum StockAlertStatus {
+  ACTIVE
+  RESOLVED
+}
+
+model User {
+  id                         String    @id @default(uuid())
+  username                   String    @unique
+  email                      String    @unique
+  password                   String
+  name                       String?
+  role                       Role      @default(OWNER)
+  isEmailVerified            Boolean   @default(false)
+  verificationTokenHash      String?
+  verificationTokenExpiresAt DateTime?
+
+  shopId String? @unique
+  shop   Shop?   @relation(fields: [shopId], references: [id], onDelete: SetNull)
+
+  transactions          StockTransaction[]
+  cancelledTransactions StockTransaction[] @relation("TransactionCancellations")
+  sales                 Sale[]             @relation("SaleCreators")
+  cancelledSales        Sale[]             @relation("SaleCancellations")
+  usageRecords          StockUsage[]       @relation("UsageCreators")
+  cancelledUsageRecords StockUsage[]       @relation("UsageCancellations")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([username])
+  @@index([email])
+  @@map("users")
+}
+
+model Shop {
+  id        String   @id @default(uuid())
+  name      String
+  ownerName String
+  phone     String
+  address   String?
+  currency  String   @default("INR")
+  type      ShopType @default(TEA_SHOP)
+  timezone  String   @default("Asia/Kolkata")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User?
+  items        InventoryItem[]
+  suppliers    Supplier[]
+  transactions StockTransaction[]
+  menuItems    MenuItem[]
+  sales        Sale[]
+  usageRecords StockUsage[]
+  stockAlerts  StockAlert[]
+
+  @@map("shops")
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  email     String?
+  address   String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items        InventoryItem[]
+  transactions StockTransaction[]
+
+  @@index([shopId])
+  @@index([shopId, name])
+  @@index([shopId, isActive])
+  @@map("suppliers")
+}
+
+model InventoryItem {
+  id           String       @id @default(uuid())
+  shopId       String
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  category     ItemCategory
+  unit         ItemUnit
+  leadTimeDays Int          @default(0)
+  openingStock Decimal      @default(0) @db.Decimal(12, 3)
+  currentStock Decimal      @default(0) @db.Decimal(12, 3)
+  unitCost     Decimal      @default(0) @db.Decimal(12, 2)
+  minStock     Decimal      @default(0) @db.Decimal(12, 3)
+  reorderLevel Decimal      @default(0) @db.Decimal(12, 3)
+  targetStock  Decimal      @default(0) @db.Decimal(12, 3)
+  supplierId   String?
+  supplier     Supplier?    @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  transactions StockTransaction[]
+  recipeItems  RecipeItem[]
+  usageItems   StockUsageItem[]
+  stockAlerts  StockAlert[]
+
+  @@unique([shopId, name])
+  @@index([shopId])
+  @@index([shopId, isActive])
+  @@index([shopId, category])
+  @@map("inventory_items")
+}
+
+model StockTransaction {
+  id                 String            @id @default(uuid())
+  shopId             String
+  shop               Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  itemId             String
+  item               InventoryItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type               TransactionType
+  quantity           Decimal           @db.Decimal(12, 3)
+  unitCost           Decimal?          @db.Decimal(12, 2)
+  totalCost          Decimal?          @db.Decimal(12, 2)
+  supplierId         String?
+  supplier           Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  reference          String?
+  wastageReason      String?
+  remarks            String?
+  idempotencyKey     String?
+  status             TransactionStatus @default(ACTIVE)
+  inputUnit          ItemUnit?
+  inputQuantity      Decimal?          @db.Decimal(12, 3)
+  inputUnitCost      Decimal?          @db.Decimal(12, 2)
+  reversalOfId       String?           @unique
+  reversalOf         StockTransaction? @relation("StockReversals", fields: [reversalOfId], references: [id], onDelete: SetNull)
+  reversal           StockTransaction? @relation("StockReversals")
+  auditGroupId       String?
+  cancelledAt        DateTime?
+  cancelledById      String?
+  cancelledByUser    User?             @relation("TransactionCancellations", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancellationReason String?
+  saleId             String?
+  sale               Sale?             @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  usageRecordId      String?
+  usageRecord        StockUsage?       @relation(fields: [usageRecordId], references: [id], onDelete: SetNull)
+  createdById        String?
+  createdByUser      User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  date               DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([shopId, idempotencyKey])
+  @@index([shopId])
+  @@index([itemId])
+  @@index([supplierId])
+  @@index([shopId, date])
+  @@index([shopId, type])
+  @@index([shopId, status])
+  @@index([auditGroupId])
+  @@index([saleId])
+  @@index([usageRecordId])
+  @@map("stock_transactions")
+}
+
+model MenuItem {
+  id           String       @id @default(uuid())
+  shopId       String
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  category     String       @default("TEA")
+  sellingPrice Decimal      @db.Decimal(12, 2)
+  isActive     Boolean      @default(true)
+  recipeItems  RecipeItem[]
+  saleItems    SaleItem[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([shopId, name])
+  @@index([shopId, isActive])
+  @@map("menu_items")
+}
+
+model RecipeItem {
+  id         String        @id @default(uuid())
+  menuItemId String
+  menuItem   MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  itemId     String
+  item       InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity   Decimal       @db.Decimal(12, 3)
+
+  @@unique([menuItemId, itemId])
+  @@index([itemId])
+  @@map("recipe_items")
+}
+
+model Sale {
+  id                 String             @id @default(uuid())
+  shopId             String
+  shop               Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reference          String?
+  notes              String?
+  total              Decimal            @db.Decimal(12, 2)
+  status             TransactionStatus  @default(ACTIVE)
+  idempotencyKey     String?
+  auditGroupId       String?
+  cancelledAt        DateTime?
+  cancelledById      String?
+  cancelledByUser    User?              @relation("SaleCancellations", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancellationReason String?
+  createdById        String?
+  createdByUser      User?              @relation("SaleCreators", fields: [createdById], references: [id], onDelete: SetNull)
+  date               DateTime           @default(now())
+  items              SaleItem[]
+  movements          StockTransaction[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([shopId, idempotencyKey])
+  @@index([shopId, date])
+  @@index([shopId, status])
+  @@index([auditGroupId])
+  @@map("sales")
+}
+
+model SaleItem {
+  id         String   @id @default(uuid())
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  name       String
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(12, 2)
+  total      Decimal  @db.Decimal(12, 2)
+
+  @@index([saleId])
+  @@index([menuItemId])
+  @@map("sale_items")
+}
+
+model StockUsage {
+  id                 String             @id @default(uuid())
+  shopId             String
+  shop               Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reference          String?
+  notes              String?
+  totalCost          Decimal            @db.Decimal(12, 2)
+  status             TransactionStatus  @default(ACTIVE)
+  idempotencyKey     String?
+  auditGroupId       String?
+  cancelledAt        DateTime?
+  cancelledById      String?
+  cancelledByUser    User?              @relation("UsageCancellations", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancellationReason String?
+  createdById        String?
+  createdByUser      User?              @relation("UsageCreators", fields: [createdById], references: [id], onDelete: SetNull)
+  date               DateTime           @default(now())
+  items              StockUsageItem[]
+  movements          StockTransaction[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([shopId, idempotencyKey])
+  @@index([shopId, date])
+  @@index([shopId, status])
+  @@index([auditGroupId])
+  @@map("stock_usage_records")
+}
+
+model StockUsageItem {
+  id            String        @id @default(uuid())
+  usageRecordId String
+  usageRecord   StockUsage    @relation(fields: [usageRecordId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  name          String
+  unit          ItemUnit
+  quantity      Decimal       @db.Decimal(12, 3)
+  unitCost      Decimal       @db.Decimal(12, 2)
+  totalCost     Decimal       @db.Decimal(12, 2)
+
+  @@index([usageRecordId])
+  @@index([itemId])
+  @@map("stock_usage_items")
+}
+
+model StockAlert {
+  id               String           @id @default(uuid())
+  shopId           String
+  shop             Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  itemId           String
+  item             InventoryItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type             StockAlertType
+  status           StockAlertStatus @default(ACTIVE)
+  activeKey        String?
+  title            String
+  message          String
+  currentStock     Decimal          @db.Decimal(12, 3)
+  minStock         Decimal          @db.Decimal(12, 3)
+  reorderLevel     Decimal          @db.Decimal(12, 3)
+  targetStock      Decimal          @db.Decimal(12, 3)
+  suggestedQty     Decimal          @db.Decimal(12, 3)
+  triggeredAt      DateTime         @default(now())
+  resolvedAt       DateTime?
+  resolutionReason String?
+  readAt           DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([shopId, itemId, type, activeKey])
+  @@index([shopId, status])
+  @@index([shopId, type])
+  @@index([itemId])
+  @@map("stock_alerts")
+}

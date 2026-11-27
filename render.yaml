@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: shoptea-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build
+    startCommand: npm run prisma:deploy && npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: 'off'
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+      - key: COOKIE_SAME_SITE
+        value: none
