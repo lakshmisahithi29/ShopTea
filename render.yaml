@@ -9,7 +9,6 @@ services:
     startCommand: npm run prisma:deploy && npm start
     healthCheckPath: /api/health
     autoDeployTrigger: 'off'
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_ENV
         value: production
