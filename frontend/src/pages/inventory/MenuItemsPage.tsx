@@ -26,7 +26,7 @@ const emptyForm = (): MenuForm => ({
   category: 'TEA',
   sellingPrice: '',
   isActive: true,
-  recipeItems: [{ itemId: '', quantity: '' }],
+  recipeItems: [],
 });
 
 function recipeCost(menu: MenuItem): number {
@@ -187,7 +187,7 @@ export const MenuItemsPage: React.FC = () => {
       {loading ? (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-56 bg-white border rounded-xl animate-pulse" />)}</div>
       ) : menuItems.length === 0 ? (
-        <div className="bg-white border rounded-xl py-14 text-center"><BookOpen className="mx-auto h-9 w-9 text-slate-300 mb-3" /><p className="font-semibold text-slate-800">No menu items found</p><p className="text-sm text-slate-500 mt-1">Add a drink or snack and define its recipe to start recording sales.</p></div>
+        <div className="bg-white border rounded-xl py-14 text-center"><BookOpen className="mx-auto h-9 w-9 text-slate-300 mb-3" /><p className="font-semibold text-slate-800">No menu items found</p><p className="text-sm text-slate-500 mt-1">Add a drink or snack to start recording sales. Recipes are optional.</p></div>
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
           {menuItems.map((menuItem) => {
@@ -195,19 +195,19 @@ export const MenuItemsPage: React.FC = () => {
             return (
               <article key={menuItem.id} className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0"><div className="flex items-center gap-2"><Coffee className="h-4 w-4 text-amber-600 shrink-0" /><h2 className="font-semibold text-slate-900 truncate">{menuItem.name}</h2></div><p className="text-xs text-slate-500 mt-1">{menuItem.category} · {menuItem.recipeItems.length} ingredients</p></div>
+                  <div className="min-w-0"><div className="flex items-center gap-2"><Coffee className="h-4 w-4 text-amber-600 shrink-0" /><h2 className="font-semibold text-slate-900 truncate">{menuItem.name}</h2></div><p className="text-xs text-slate-500 mt-1">{menuItem.category} · {menuItem.recipeItems.length ? `${menuItem.recipeItems.length} ingredients` : 'No recipe'}</p></div>
                   <button type="button" onClick={() => openEdit(menuItem)} className="p-2 text-amber-700 hover:bg-amber-50 rounded-lg" title="Edit menu item"><Pencil className="h-4 w-4" /></button>
                 </div>
                 <p className="text-sm text-slate-600 mt-3 min-h-[40px] line-clamp-2">{menuItem.description || 'No description provided.'}</p>
                 <div className="grid grid-cols-2 gap-2 my-4">
                   <div className="bg-amber-50 rounded-lg p-3"><p className="text-[11px] font-semibold text-amber-800 uppercase">Selling price</p><p className="text-lg font-bold text-slate-900 mt-1">{money(menuItem.sellingPrice)}</p></div>
-                  <div className="bg-slate-50 rounded-lg p-3"><p className="text-[11px] font-semibold text-slate-500 uppercase">Est. ingredient cost</p><p className="text-lg font-bold text-slate-900 mt-1">{money(cost)}</p><p className="text-[11px] text-slate-500">Margin {money(menuItem.sellingPrice - cost)}</p></div>
+                  <div className="bg-slate-50 rounded-lg p-3"><p className="text-[11px] font-semibold text-slate-500 uppercase">Est. ingredient cost</p><p className="text-lg font-bold text-slate-900 mt-1">{menuItem.recipeItems.length ? money(cost) : 'Not tracked'}</p><p className="text-[11px] text-slate-500">{menuItem.recipeItems.length ? `Margin ${money(menuItem.sellingPrice - cost)}` : 'No recipe linked'}</p></div>
                 </div>
                 <div className="border-t border-slate-100 pt-3 flex-1">
                   <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Recipe per sale</p>
-                  <ul className="space-y-2">{menuItem.recipeItems.map((recipe) => (
+                  {menuItem.recipeItems.length > 0 ? <ul className="space-y-2">{menuItem.recipeItems.map((recipe) => (
                     <li key={recipe.id} className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-700 truncate">{recipe.item?.name || 'Missing item'}</span><span className="text-slate-500 whitespace-nowrap">{formatQty(recipe.quantity)} {recipe.item?.unit}</span></li>
-                  ))}</ul>
+                  ))}</ul> : <p className="text-sm text-slate-500">No recipe linked. Sales of this item do not deduct inventory automatically.</p>}
                 </div>
                 <div className="mt-4 flex items-center justify-between"><span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${menuItem.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>{menuItem.isActive ? 'AVAILABLE' : 'UNAVAILABLE'}</span><span className="text-xs text-slate-500">Historical sales keep saved prices</span></div>
               </article>
@@ -219,7 +219,7 @@ export const MenuItemsPage: React.FC = () => {
       {formOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="menu-form-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) resetForm(); }}>
           <form onSubmit={submit} className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-5">
-            <div className="flex items-start justify-between gap-3 mb-5"><div><h2 id="menu-form-title" className="text-lg font-bold text-slate-900">{editing ? 'Edit menu item & recipe' : 'Add menu item & recipe'}</h2><p className="text-xs text-slate-500 mt-1">Recipe quantities use each inventory item's base unit. Existing sales remain unchanged.</p></div><button type="button" onClick={resetForm} disabled={saving} className="p-2 hover:bg-slate-100 rounded-lg" aria-label="Close menu form"><X className="h-5 w-5" /></button></div>
+            <div className="flex items-start justify-between gap-3 mb-5"><div><h2 id="menu-form-title" className="text-lg font-bold text-slate-900">{editing ? 'Edit menu item' : 'Add menu item'}</h2><p className="text-xs text-slate-500 mt-1">Recipes are optional. When linked, quantities use each inventory item's base unit.</p></div><button type="button" onClick={resetForm} disabled={saving} className="p-2 hover:bg-slate-100 rounded-lg" aria-label="Close menu form"><X className="h-5 w-5" /></button></div>
             <div className="grid md:grid-cols-2 gap-3">
               <div><label className={labelClass}>Menu item name</label><input required maxLength={100} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className={inputClass} placeholder="e.g. Masala Chai" /></div>
               <div><label className={labelClass}>Category</label><select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value as MenuCategory })} className={inputClass}>{categories.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
@@ -229,20 +229,22 @@ export const MenuItemsPage: React.FC = () => {
             </div>
 
             <div className="mt-5 border-t border-slate-200 pt-4">
-              <div className="flex items-center justify-between mb-3"><div><h3 className="font-semibold text-slate-900">Recipe ingredients</h3><p className="text-xs text-slate-500 mt-1">Amounts consumed for one sold item.</p></div><button type="button" onClick={() => setForm({ ...form, recipeItems: [...form.recipeItems, { itemId: '', quantity: '' }] })} className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700"><Plus className="h-4 w-4" /> Add ingredient</button></div>
+              <div className="flex items-center justify-between mb-3"><div><h3 className="font-semibold text-slate-900">Recipe ingredients (optional)</h3><p className="text-xs text-slate-500 mt-1">Amounts consumed for one sold item. Leave empty to skip automatic stock deduction.</p></div><button type="button" onClick={() => setForm({ ...form, recipeItems: [...form.recipeItems, { itemId: '', quantity: '' }] })} className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700"><Plus className="h-4 w-4" /> Add ingredient</button></div>
               <div className="space-y-2">
+                {form.recipeItems.length === 0 && <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">No ingredients added. You can save this menu item without a recipe.</p>}
                 {form.recipeItems.map((row, index) => {
                   const item = selectedItems[index];
+                  const wholeUnit = item?.unit === 'PIECES' || item?.unit === 'PACKETS';
                   return (
                     <div key={index} className="grid grid-cols-[1fr_130px_auto] sm:grid-cols-[1fr_150px_36px] gap-2 items-end">
                       <div><label className="text-xs font-semibold text-slate-600">Inventory item</label><select required value={row.itemId} onChange={(event) => updateRecipe(index, { itemId: event.target.value })} className={inputClass}><option value="">Choose ingredient</option>{items.filter((candidate) => candidate.isActive || candidate.id === row.itemId).map((candidate) => <option key={candidate.id} value={candidate.id} disabled={recipeItemIds.includes(candidate.id) && candidate.id !== row.itemId}>{candidate.name} ({formatQty(candidate.currentStock)} {candidate.unit})</option>)}</select></div>
-                      <div><label className="text-xs font-semibold text-slate-600">Quantity {item ? `(${item.unit})` : ''}</label><input required type="number" min="0.001" step={item?.unit === 'PIECES' || item?.unit === 'PACKETS' ? '1' : '0.001'} value={row.quantity} onChange={(event) => updateRecipe(index, { quantity: event.target.value })} className={inputClass} /></div>
-                      <button type="button" disabled={form.recipeItems.length === 1} onClick={() => setForm({ ...form, recipeItems: form.recipeItems.filter((_, rowIndex) => rowIndex !== index) })} className="h-10 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-30" title="Remove ingredient"><Trash2 className="h-4 w-4" /></button>
+                      <div><label className="text-xs font-semibold text-slate-600">Quantity {item ? `(${item.unit})` : ''}</label><input required type="number" min={wholeUnit ? '1' : '0.001'} step={wholeUnit ? '1' : '0.001'} value={row.quantity} onChange={(event) => updateRecipe(index, { quantity: event.target.value })} className={inputClass} /></div>
+                      <button type="button" disabled={saving} onClick={() => setForm({ ...form, recipeItems: form.recipeItems.filter((_, rowIndex) => rowIndex !== index) })} className="h-10 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-30" title="Remove ingredient"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   );
                 })}
               </div>
-              <div className="mt-4 bg-slate-50 rounded-lg p-3 grid sm:grid-cols-3 gap-3 text-sm"><p className="text-slate-600">Estimated ingredient cost: <strong className="text-slate-900">{money(estimatedCost)}</strong></p><p className="text-slate-600">Estimated margin: <strong className={estimatedMargin < 0 ? 'text-red-700' : 'text-slate-900'}>{money(estimatedMargin)}</strong></p><p className="text-slate-500">Based on current weighted-average costs</p></div>
+              <div className="mt-4 bg-slate-50 rounded-lg p-3 grid sm:grid-cols-3 gap-3 text-sm"><p className="text-slate-600">Estimated ingredient cost: <strong className="text-slate-900">{form.recipeItems.length ? money(estimatedCost) : 'Not tracked'}</strong></p><p className="text-slate-600">Estimated margin: <strong className={estimatedMargin < 0 ? 'text-red-700' : 'text-slate-900'}>{form.recipeItems.length ? money(estimatedMargin) : 'Not tracked'}</strong></p><p className="text-slate-500">Based on current weighted-average costs</p></div>
             </div>
 
             <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={resetForm} disabled={saving} className="px-4 py-2 border border-slate-300 rounded-lg text-sm">Cancel</button><button type="submit" disabled={saving || !form.name || !form.sellingPrice || form.recipeItems.some((row) => !row.itemId || !row.quantity)} className="px-5 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold disabled:opacity-50">{saving ? 'Saving...' : editing ? 'Save changes' : 'Create menu item'}</button></div>

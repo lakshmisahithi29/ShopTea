@@ -47,6 +47,7 @@ function serializeMenuItem(menuItem: any): any {
 }
 
 async function validateRecipe(tx: Prisma.TransactionClient, shopId: string, recipeItems: RecipeInput[]) {
+  if (recipeItems.length === 0) return [];
   const ids = recipeItems.map((recipe) => recipe.itemId);
   const items = await tx.inventoryItem.findMany({ where: { id: { in: ids }, shopId } });
   if (items.length !== ids.length) throw new NotFoundError('One or more recipe items do not belong to your shop.');

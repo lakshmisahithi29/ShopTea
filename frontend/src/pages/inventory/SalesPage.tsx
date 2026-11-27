@@ -193,7 +193,7 @@ export const SalesPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <div><h1 className="text-2xl font-bold text-slate-900">Sales</h1><p className="text-sm text-slate-500">Record counter sales and deduct recipe ingredients automatically.</p></div>
+        <div><h1 className="text-2xl font-bold text-slate-900">Sales</h1><p className="text-sm text-slate-500">Record counter sales; linked recipe ingredients are deducted automatically.</p></div>
         <div className="flex gap-2">{formOpen && <button type="button" onClick={() => { resetForm(); navigate('/sales'); }} className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold">View history</button>}{!formOpen && <button type="button" onClick={openCreate} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold"><Plus className="h-4 w-4" /> Record sale</button>}</div>
       </div>
 
@@ -238,8 +238,8 @@ export const SalesPage: React.FC = () => {
               return <p key={itemId} className={`text-sm ${short ? 'text-red-700' : 'text-slate-600'}`}>{item?.name || 'Unknown ingredient'}: <strong>{formatQty(quantity)} {item?.unit}</strong><span className="text-xs"> · available {formatQty(Number(item?.currentStock || 0))}</span></p>;
             })}</div></div>
           )}
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"><p className="text-lg font-bold text-slate-900">Sale total: {money(saleTotal)}</p><button type="submit" disabled={saving || activeMenus.length === 0 || shortages.length > 0 || validLines.length === 0} className="px-5 py-2.5 bg-slate-900 text-white rounded-lg font-semibold disabled:opacity-50">{saving ? 'Recording...' : 'Record sale & deduct stock'}</button></div>
-          {activeMenus.length === 0 && <p className="text-xs text-amber-700 mt-2">Create and activate a menu item with a recipe before recording a sale.</p>}
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"><p className="text-lg font-bold text-slate-900">Sale total: {money(saleTotal)}</p><button type="submit" disabled={saving || activeMenus.length === 0 || shortages.length > 0 || validLines.length === 0} className="px-5 py-2.5 bg-slate-900 text-white rounded-lg font-semibold disabled:opacity-50">{saving ? 'Recording...' : ingredientUsage.size > 0 ? 'Record sale & deduct stock' : 'Record sale'}</button></div>
+          {activeMenus.length === 0 && <p className="text-xs text-amber-700 mt-2">Create and activate a menu item before recording a sale. Recipes are optional.</p>}
         </form>
       )}
 

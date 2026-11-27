@@ -19,10 +19,10 @@ export async function getMenuItem(req: Request, res: Response) {
 
 export async function createMenuItem(req: Request, res: Response) {
   const menuItem = await MenuService.create(shopId(req), req.body);
-  res.status(201).json({ success: true, message: 'Menu item and recipe saved.', menuItem });
+  res.status(201).json({ success: true, message: 'Menu item saved.', menuItem });
 }
 
 export async function updateMenuItem(req: Request, res: Response) {
   const menuItem = await MenuService.update(shopId(req), req.params.id, req.body);
-  res.status(200).json({ success: true, message: 'Menu item and recipe updated.', menuItem });
+  res.status(200).json({ success: true, message: 'Menu item updated.', menuItem });
 }

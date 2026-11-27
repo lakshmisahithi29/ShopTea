@@ -284,6 +284,33 @@ describe('Phase 6 sales, recipes, and stock usage API', { concurrency: false }, 
     assert.equal((await request(`/api/usage-records/${firstUsageId}`, otherToken)).response.status, 404);
   });
 
+  test('menu items can be created, edited, sold, and cancelled without a recipe', async () => {
+    const stockBefore = (await stock(teaId)).currentStock;
+    const created = await postMenu({ name: `${prefix} Packaged Chocolate`, category: 'SNACK', sellingPrice: 20 });
+    assert.equal(created.response.status, 201, JSON.stringify(created.body));
+    assert.deepEqual(created.body.menuItem.recipeItems, []);
+    const menuId = created.body.menuItem.id;
+
+    const withRecipe = await patchMenu(menuId, { name: `${prefix} Packaged Chocolate`, category: 'SNACK', sellingPrice: 20, recipeItems: [{ itemId: teaId, quantity: 0.01 }] });
+    assert.equal(withRecipe.response.status, 200, JSON.stringify(withRecipe.body));
+    assert.equal(withRecipe.body.menuItem.recipeItems.length, 1);
+    const cleared = await patchMenu(menuId, { name: `${prefix} Packaged Chocolate`, category: 'SNACK', sellingPrice: 20, recipeItems: [] });
+    assert.equal(cleared.response.status, 200, JSON.stringify(cleared.body));
+    assert.deepEqual(cleared.body.menuItem.recipeItems, []);
+
+    const sold = await postSale(salePayload({ items: [{ menuItemId: menuId, quantity: 2 }], idempotencyKey: `${prefix}-no-recipe-sale` }));
+    assert.equal(sold.response.status, 201, JSON.stringify(sold.body));
+    assert.equal(sold.body.sale.total, 40);
+    assert.deepEqual(sold.body.sale.movements, []);
+    assert.equal((await stock(teaId)).currentStock, stockBefore);
+
+    const cancelled = await request(`/api/sales/${sold.body.sale.id}/cancel`, ownerToken, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'No recipe sale correction', idempotencyKey: `${prefix}-cancel-no-recipe-sale` }) });
+    assert.equal(cancelled.response.status, 200, JSON.stringify(cancelled.body));
+    assert.equal(cancelled.body.sale.status, 'CANCELLED');
+    assert.deepEqual(cancelled.body.reversals, []);
+    assert.equal((await stock(teaId)).currentStock, stockBefore);
+  });
+
   test('usage cancellation restores all items and invalid units or quantities roll back safely', async () => {
     const payload = { reason: 'Preparation entry was incorrect', idempotencyKey: `${prefix}-cancel-usage` };
     const cancelled = await request(`/api/usage-records/${firstUsageId}/cancel`, ownerToken, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });

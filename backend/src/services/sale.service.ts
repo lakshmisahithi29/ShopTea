@@ -139,28 +139,30 @@ export class SaleService {
           const quantity = ingredients.get(item.id)!;
           await tx.inventoryItem.update({ where: { id: item.id }, data: { currentStock: { decrement: quantity } } });
         }
-        await tx.stockTransaction.createMany({
-          data: inventoryItems.map((item) => {
-            const quantity = ingredients.get(item.id)!;
-            const unitCost = Number(item.unitCost);
-            return {
-              shopId: tenant.shopId,
-              itemId: item.id,
-              saleId: created.id,
-              type: 'USAGE' as const,
-              quantity,
-              unitCost,
-              totalCost: roundMoney(quantity * unitCost),
-              reference: `SALE:${created.id}`,
-              remarks: `Recipe usage for sale ${created.id}`,
-              idempotencyKey: `SALE:${created.id}:ITEM:${item.id}`,
-              inputUnit: item.unit,
-              inputQuantity: quantity,
-              createdById: tenant.userId,
-              date: created.date,
-            };
-          }),
-        });
+        if (inventoryItems.length > 0) {
+          await tx.stockTransaction.createMany({
+            data: inventoryItems.map((item) => {
+              const quantity = ingredients.get(item.id)!;
+              const unitCost = Number(item.unitCost);
+              return {
+                shopId: tenant.shopId,
+                itemId: item.id,
+                saleId: created.id,
+                type: 'USAGE' as const,
+                quantity,
+                unitCost,
+                totalCost: roundMoney(quantity * unitCost),
+                reference: `SALE:${created.id}`,
+                remarks: `Recipe usage for sale ${created.id}`,
+                idempotencyKey: `SALE:${created.id}:ITEM:${item.id}`,
+                inputUnit: item.unit,
+                inputQuantity: quantity,
+                createdById: tenant.userId,
+                date: created.date,
+              };
+            }),
+          });
+        }
         for (const itemId of itemIds) {
           await syncItemStockAlert(tx, tenant.shopId, itemId);
         }

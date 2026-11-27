@@ -13,7 +13,7 @@ export const menuItemSchema = z.object({
   category: menuCategorySchema.default('TEA'),
   sellingPrice: z.number().positive('Selling price must be greater than zero').max(9_999_999_999.99),
   isActive: z.boolean().optional(),
-  recipeItems: z.array(recipeItemSchema).min(1, 'Add at least one recipe ingredient').max(50),
+  recipeItems: z.array(recipeItemSchema).max(50).optional().default([]),
 }).strict().refine((value) => new Set(value.recipeItems.map((item) => item.itemId)).size === value.recipeItems.length, {
   message: 'Each inventory item can appear only once in a recipe',
   path: ['recipeItems'],

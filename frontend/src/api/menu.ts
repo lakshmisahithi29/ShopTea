@@ -9,7 +9,7 @@ export interface MenuPayload {
   category: MenuCategory;
   sellingPrice: number;
   isActive?: boolean;
-  recipeItems: Array<{ itemId: string; quantity: number }>;
+  recipeItems?: Array<{ itemId: string; quantity: number }>;
 }
 
 export interface MenuListParams {
