@@ -5,12 +5,6 @@ ShopTea is a full-stack inventory management application designed to help tea sh
 
 The application brings day-to-day inventory operations into one place, helping shop owners understand what they have in stock, how materials are being used, and what may need to be purchased next.
 
-## Project Links
-
-- **Live Application:** [Add your deployed Vercel URL]
-- **GitHub Repository:** [Add your GitHub repository URL]
-- **Walkthrough Video:** [Add your 5-minute demonstration link]
-
 ## Key Features
 
 ### Inventory Management
